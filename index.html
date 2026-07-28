@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRAQS · 인트로</title>
+<style>
+/* ============================================================
+   TRAQS 영상 인트로
+   ① 시작 화면("여행을 시작합니다" 클릭)
+   ② 영상 재생
+   ③ 영상 끝 → 입장 카드 + "홈페이지 입장하기" 버튼
+   ============================================================ */
+:root{
+  --navy:#26314a;
+  --gold:#fcd469;
+  --serif:"Optima","Palatino Linotype",Georgia,"Times New Roman",serif;
+  --kr:"Noto Sans KR","Malgun Gothic","맑은 고딕",system-ui,-apple-system,sans-serif;
+  --blk:"Noto Sans KR","Arial Black","Malgun Gothic",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#05070c;overflow:hidden}
+body{font-family:var(--kr);color:#fff;-webkit-font-smoothing:antialiased}
+
+#app{position:fixed;inset:0;overflow:hidden}
+
+/* ---------- 영상 ---------- */
+#film{position:absolute;inset:0;width:100%;height:100%;display:block;
+  object-fit:contain;background:#05070c;
+  transition:opacity 1.25s cubic-bezier(.5,0,.75,.45),
+             transform 1.7s cubic-bezier(.22,.61,.36,1),
+             filter 1.25s ease}
+#film.fill{object-fit:cover}
+/* 전환: 화면이 살짝 밀려들며 빛으로 풀어져 사라진다 (검은 화면 없이 녹아든다)
+   흐림을 함께 주어, 영상 속 글자와 카드 글자가 겹쳐 어긋나 보이지 않게 한다 */
+#film.out{opacity:0;transform:scale(1.06);
+  filter:brightness(1.5) saturate(.55) blur(8px)}
+
+.vignette{position:absolute;inset:0;pointer-events:none;z-index:12;
+  background:radial-gradient(128% 96% at 50% 46%,transparent 46%,rgba(0,0,0,.45) 100%)}
+#grain{position:absolute;inset:0;pointer-events:none;z-index:13;opacity:.05;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+  mix-blend-mode:overlay}
+
+/* ---------- 시작 화면 ---------- */
+#start{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:30px;background:radial-gradient(75% 75% at 50% 45%,#26314a 0%,#141b28 70%,#0c121d 100%);
+  cursor:pointer;transition:opacity .8s ease}
+#start.hide{opacity:0;pointer-events:none}
+#start .mark{width:min(52vw,420px);opacity:.92}
+#start .wordmark{font-family:var(--serif);font-size:clamp(26px,5vw,58px);letter-spacing:.42em;
+  text-indent:.42em;color:#fcd469;margin:-14px 0 -6px}
+#start .go{font-size:clamp(14px,1.7vw,19px);letter-spacing:.22em;
+  color:#fde7a6;border:1px solid rgba(252,212,105,.55);padding:16px 40px;
+  background:rgba(252,212,105,.08);transition:.35s}
+#start:hover .go,#start:focus-visible .go{background:rgba(252,212,105,.18);
+  border-color:var(--gold);letter-spacing:.28em}
+#start:focus-visible{outline:none}
+#start .sub{font-size:12px;letter-spacing:.16em;color:rgba(255,255,255,.34);
+  animation:breathe 3s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.5}50%{opacity:1}}
+#loading{font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.3);min-height:16px}
+
+/* ---------- HUD ---------- */
+#bar{position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,.13);
+  z-index:50;opacity:0;transition:opacity .5s}
+#bar.on{opacity:1}
+#barFill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),#fff);
+  box-shadow:0 0 12px rgba(252,212,105,.85)}
+.btn{position:fixed;font-family:var(--kr);font-size:12px;letter-spacing:.14em;
+  color:rgba(255,255,255,.72);background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.22);
+  padding:9px 16px;cursor:pointer;backdrop-filter:blur(4px);transition:.25s;z-index:55;
+  opacity:0;pointer-events:none}
+.btn.on{opacity:1;pointer-events:auto}
+.btn:hover,.btn:focus-visible{color:#fff;border-color:rgba(255,255,255,.6);
+  background:rgba(0,0,0,.52);outline:none}
+#skip{right:22px;bottom:24px}
+#mute{right:22px;top:22px;min-width:46px;text-align:center}
+#fit{left:22px;top:22px}
+
+/* ---------- 입장 카드 ---------- */
+#end{position:absolute;inset:0;z-index:30;display:none;opacity:0;
+  background:linear-gradient(160deg,#ffffff 0%,#f0f7ff 55%,#e7f0fb 100%);color:var(--navy);
+  /* 영상이 옅어지는 속도보다 먼저 밝게 차올라, 중간에 어두워지는 구간이 없다 */
+  transition:opacity .95s cubic-bezier(.2,.78,.32,1)}
+#end.on{display:flex;align-items:center;justify-content:center}
+#end.show{opacity:1}
+#end .trio{position:absolute;display:flex;align-items:center;gap:clamp(24px,5vw,76px);
+  animation:trioIn 1.25s ease forwards}
+@keyframes trioIn{0%{gap:15vw;opacity:0}18%{opacity:1}48%{opacity:1}72%,100%{opacity:0;gap:0}}
+#end .trio svg{width:clamp(66px,12vw,150px);height:auto;stroke:var(--navy);fill:none;
+  stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;
+  stroke-dasharray:460;stroke-dashoffset:460;animation:draw .9s ease forwards}
+#end .trio svg:nth-child(2){animation-delay:.14s}
+#end .trio svg:nth-child(3){animation-delay:.28s}
+@keyframes draw{to{stroke-dashoffset:0}}
+#end .brand{position:absolute;text-align:center;opacity:0;animation:brandIn .85s ease .30s forwards}
+@keyframes brandIn{0%{opacity:0;transform:translateY(14px) scale(.97)}100%{opacity:1;transform:none}}
+#end .rule{width:64px;height:1px;background:var(--gold);margin:0 auto 22px}
+#end h1{margin:0;font-family:var(--serif);font-weight:400;
+  font-size:clamp(38px,7.6vw,104px);letter-spacing:.3em;text-indent:.3em;line-height:1;
+  color:var(--navy);
+  background:linear-gradient(102deg,
+    #26314a 0%, #26314a 26%,
+    #b8912f 37%, #fcd469 44%, #fffbe9 50%, #fcd469 56%, #b8912f 63%,
+    #26314a 74%, #26314a 100%);
+  background-size:300% 100%;background-position:120% 0;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shineSweep 2.2s cubic-bezier(.34,0,.30,1) .95s both}
+@keyframes shineSweep{
+  0%{background-position:120% 0;filter:drop-shadow(0 0 0 rgba(201,162,39,0))}
+  45%{filter:drop-shadow(0 0 20px rgba(252,212,105,.65))}
+  100%{background-position:-30% 0;filter:drop-shadow(0 0 0 rgba(201,162,39,0))}
+}
+@supports not ((-webkit-background-clip:text) or (background-clip:text)){
+  #end h1{background:none;-webkit-text-fill-color:var(--navy);color:var(--navy);animation:none}
+}
+#end .en{margin:24px 0 0;font-family:var(--blk);font-weight:700;
+  font-size:clamp(11px,1.35vw,17px);letter-spacing:.16em;color:#26314a}
+#end .kr2{margin:13px 0 0;font-family:var(--blk);font-weight:700;
+  font-size:clamp(11px,1.2vw,14px);letter-spacing:.06em;color:#5a6683}
+#enter{margin-top:clamp(26px,5vh,54px);cursor:pointer;font-family:var(--blk);font-weight:900;
+  font-size:clamp(13px,1.5vw,16px);letter-spacing:.26em;color:#fff;
+  background:#26314a;border:1px solid #26314a;box-shadow:0 0 0 3px rgba(252,212,105,.35);
+  padding:16px 46px;transition:.3s;opacity:0;animation:brandIn 1s ease 2.6s forwards}
+#enter:hover,#enter:focus-visible{background:#1b2439;
+  letter-spacing:.32em;box-shadow:0 8px 26px rgba(38,49,74,.32),0 0 0 3px rgba(252,212,105,.55);outline:none}
+#replay{margin-top:18px;display:block;margin-left:auto;margin-right:auto;cursor:pointer;
+  font-family:var(--kr);font-size:12px;letter-spacing:.14em;color:#8d939c;
+  background:none;border:none;padding:8px;opacity:0;
+  animation:brandIn 1s ease 3.0s forwards;text-decoration:underline;text-underline-offset:4px}
+#replay:hover{color:#26314a}
+/* ---------- 영상을 못 여는 경우 ---------- */
+#fallback{position:absolute;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  flex-direction:column;gap:18px;background:#05070c;text-align:center;padding:8vw}
+#fallback.on{display:flex}
+#fallback .wordmark{font-family:var(--serif);font-size:44px;letter-spacing:.4em;color:#fcd469}
+#fallback p{max-width:560px;line-height:1.9;font-size:14px;color:rgba(255,255,255,.7);
+  letter-spacing:.04em}
+#fbEnter{position:static;opacity:1;pointer-events:auto}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <video id="film" playsinline preload="auto" src="traqs-intro.mp4"></video>
+  <div class="vignette"></div>
+  <div id="grain"></div>
+  <div id="bar"><div id="barFill"></div></div>
+
+  <button id="fit"  class="btn">화면 채우기 ⤢</button>
+  <button id="mute" class="btn" aria-label="소리 끄기">♪ ON</button>
+  <button id="skip" class="btn">건너뛰기 ▸</button>
+
+  <!-- ③ 입장 카드 -->
+  <section id="end">
+    <div class="trio" aria-hidden="true">
+      <svg viewBox="0 0 120 60"><path d="M8 40h96l-10 12H18zM22 40V22h58v18M34 22V12h30v10M46 12V4M46 4h12"/></svg>
+      <svg viewBox="0 0 120 60"><path d="M6 34l12-6 34-3h40l16 6-16 6H52l-34-3zM30 25l-8-14h8l14 13M30 39l-8 14h8l14-13M92 28h4"/></svg>
+      <svg viewBox="0 0 120 60"><path d="M28 14h48q8 0 8 8v26H28zM28 22h56M40 28h12v10H40zM64 28h12v10H64zM34 48v6M78 48v6M20 54h72"/></svg>
+    </div>
+    <div class="brand">
+      <div class="rule"></div>
+      <h1>TRAQS</h1>
+      <p class="en">Travel Rate Automation, Quotation &amp; Settlement</p>
+      <p class="kr2">항공 &middot; 크루즈 &middot; 철도 통합 운임 데이터 기반 여행사 견적&middot;정산 자동화 플랫폼</p>
+      <button id="enter">홈페이지 입장하기</button>
+      <button id="replay">인트로 다시 보기</button>
+    </div>
+  </section>
+
+  <!-- ① 시작 화면 -->
+  <div id="start" role="button" tabindex="0" aria-label="인트로 재생 시작">
+    <svg class="mark" viewBox="0 0 420 60" aria-hidden="true">
+      <line x1="0" y1="30" x2="152" y2="30" stroke="rgba(252,212,105,.5)" stroke-width="1"/>
+      <line x1="268" y1="30" x2="420" y2="30" stroke="rgba(252,212,105,.5)" stroke-width="1"/>
+      <g fill="none" stroke="#fcd469" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M172 36h30l-4 8h-22z"/><path d="M178 36V26h18v10"/>
+        <path d="M208 30l14-6-3 6 3 6z"/>
+        <path d="M232 24h16v13h-16z"/><path d="M234 40h12"/>
+      </g>
+    </svg>
+    <div class="wordmark">TRAQS</div>
+    <div class="go">여행을 시작합니다 &nbsp;▶</div>
+    <div class="sub">화면을 클릭하세요 &middot; 소리가 함께 재생됩니다</div>
+    <div id="loading">영상 준비 중…</div>
+  </div>
+
+  <div id="fallback">
+    <div class="wordmark">TRAQS</div>
+    <p>인트로 영상을 재생할 수 없습니다.<br>
+       <b>TRAQS-인트로.mp4</b> 파일이 이 HTML 파일과 같은 폴더에 있는지 확인해 주세요.<br>
+       아래 버튼으로 홈페이지로 이동하실 수 있습니다.</p>
+    <button class="btn" id="fbEnter">홈페이지 입장하기 ▸</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   0. 실제 홈페이지 주소 — 여기에 넣으면 "입장하기"가 바로 이동합니다
+   ============================================================ */
+var HOME = 'rooms.html';        // 예: 'https://www.traqs.co.kr'  또는  'home.html'
+
+/* ============================================================
+   0-2. 입장 화면으로 넘어가는 시각 (초)
+        8.3 = 영상 8.3초 지점에서 입장 화면으로 전환
+        (영상 전체 길이는 10.0초 → 마지막 약 1.7초의 소리가
+         입장 화면 위로 그대로 이어져 흐릅니다)
+        영상을 끝까지 다 보여주려면  null  로 바꾸세요
+   ============================================================ */
+var END_AT = 8.3;
+
+var film    = document.getElementById('film');
+var startEl = document.getElementById('start');
+var loadEl  = document.getElementById('loading');
+var endEl   = document.getElementById('end');
+var bar     = document.getElementById('bar');
+var barFill = document.getElementById('barFill');
+var skipBtn = document.getElementById('skip');
+var muteBtn = document.getElementById('mute');
+var fitBtn  = document.getElementById('fit');
+var enterBtn= document.getElementById('enter');
+var replayBtn = document.getElementById('replay');
+var fbEl    = document.getElementById('fallback');
+
+var started = false, finished = false;
+
+/* ------------------------------------------------------------
+   1. 영상 준비
+   ------------------------------------------------------------ */
+function ready(){
+  loadEl.textContent = '준비 완료 · 클릭하세요';
+}
+if (film.readyState >= 2) ready();
+film.addEventListener('loadeddata', ready);
+film.addEventListener('error', function(){
+  fbEl.classList.add('on');
+});
+
+/* 기본은 '전체 보기' — 영상 안의 자막이 절대 잘리지 않는다.
+   (F11 전체화면 + 16:9 모니터에서는 여백 없이 화면을 꽉 채운다)
+   여백이 거슬리면 왼쪽 위 '화면 채우기' 버튼으로 바꿀 수 있다. */
+function setFill(on){
+  film.classList.toggle('fill', !!on);
+  fitBtn.textContent = on ? '전체 보기 ⤡' : '화면 채우기 ⤢';
+}
+fitBtn.addEventListener('click', function(e){
+  e.stopPropagation();
+  setFill(!film.classList.contains('fill'));
+});
+
+/* ------------------------------------------------------------
+   2. 시작 — "여행을 시작합니다" 클릭
+   ------------------------------------------------------------ */
+function begin(){
+  if (started) return;
+  started = true;
+
+  startEl.classList.add('hide');
+  bar.classList.add('on');
+  skipBtn.classList.add('on');
+  muteBtn.classList.add('on');
+  fitBtn.classList.add('on');
+
+  film.muted = false;
+  film.volume = 1;
+  startWatch();
+  var p = film.play();
+  if (p && p.catch){
+    p.catch(function(){
+      /* 브라우저가 소리 있는 자동재생을 막은 경우 — 음소거로 재생하고 알린다 */
+      film.muted = true;
+      syncMuteLabel();
+      muteBtn.textContent = '♪ 소리 켜기';
+      film.play().catch(function(){ fbEl.classList.add('on'); });
+    });
+  }
+}
+startEl.addEventListener('click', begin);
+startEl.addEventListener('keydown', function(e){
+  if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); begin(); }
+});
+
+/* ------------------------------------------------------------
+   3. 재생 중 — 진행 막대 · 전환 시각 감시 · 소리 · 건너뛰기
+   ------------------------------------------------------------ */
+/* 전환이 끝나는 지점 (END_AT 이 없으면 영상 전체 길이) */
+function stopAt(){
+  if (END_AT && END_AT > 0) return END_AT;
+  return film.duration || 0;
+}
+
+/* 매 프레임 확인 — timeupdate(초당 4회)보다 정확하게 8.3초를 잡는다 */
+var watchId = 0;
+function watch(){
+  watchId = requestAnimationFrame(watch);
+  if (finished) return;
+  var end = stopAt();
+  if (!end) return;
+  barFill.style.width = Math.min(100, film.currentTime / end * 100) + '%';
+  if (film.currentTime >= end - 0.02) finish();
+}
+function startWatch(){ if (!watchId) watch(); }
+function stopWatch(){ if (watchId){ cancelAnimationFrame(watchId); watchId = 0; } }
+
+function syncMuteLabel(){ muteBtn.textContent = film.muted ? '♪ OFF' : '♪ ON'; }
+muteBtn.addEventListener('click', function(e){
+  e.stopPropagation();
+  film.muted = !film.muted;
+  syncMuteLabel();
+});
+
+/* 건너뛰기 · ESC 는 소리도 함께 잦아들게 한다 */
+skipBtn.addEventListener('click', function(e){ e.stopPropagation(); finish(true); });
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' && started && !finished) finish(true);
+});
+
+/* ------------------------------------------------------------
+   4. 전환 → 입장 카드
+      그림만 서서히 녹아 사라지고, 영상 소리(효과음)는 그대로 이어진다.
+   ------------------------------------------------------------ */
+film.addEventListener('ended', function(){ finish(); });
+
+function finish(silent){
+  if (finished) return;
+  finished = true;
+  stopWatch();
+  barFill.style.width = '100%';
+
+  /* ① 화면 전환 — 검은 화면을 거치지 않는 겹침(크로스 디졸브) */
+  film.classList.add('out');
+  bar.classList.remove('on');
+  skipBtn.classList.remove('on');
+  muteBtn.classList.remove('on');
+  fitBtn.classList.remove('on');
+
+  endEl.classList.add('on');
+  endEl.offsetHeight;                 // 브라우저가 전환을 인식하도록 한 번 재계산
+  endEl.classList.add('show');
+  restartCardAnimation();
+
+  /* ② 소리 — 영상이 끝날 때까지 그대로 흐르게 둔다 */
+  if (silent === true){
+    fadeOutSound(700, parkFilm);      // 건너뛰기일 때만 부드럽게 줄이고 멈춤
+  } else if (film.ended){
+    parkFilm();
+  } else {
+    film.addEventListener('ended', parkFilm);
+  }
+
+  setTimeout(function(){ enterBtn.focus({preventScroll:true}); }, 3400);
+}
+
+/* 소리까지 끝나면 영상 요소를 조용히 치운다 (지우지 않고 숨겨만 둔다 → 다시 보기 가능) */
+function parkFilm(){
+  try { film.pause(); } catch(err){}
+  film.style.visibility = 'hidden';
+}
+
+function fadeOutSound(ms, done){
+  var v0 = film.volume, t0 = (window.performance ? performance.now() : Date.now());
+  (function step(){
+    var now = (window.performance ? performance.now() : Date.now());
+    var k = Math.min(1, (now - t0) / ms);
+    try { film.volume = v0 * (1 - k*k); } catch(err){}
+    if (k < 1) requestAnimationFrame(step);
+    else { try { film.volume = v0; } catch(err){} if (done) done(); }
+  })();
+}
+
+/* 다시 보기 후에도 카드 애니메이션이 처음부터 재생되도록 강제로 되감는다 */
+function restartCardAnimation(){
+  var nodes = endEl.querySelectorAll('.trio, .trio svg, .brand, h1, #enter, #replay');
+  for (var i=0;i<nodes.length;i++){
+    var n = nodes[i], a = n.style.animation;
+    n.style.animation = 'none';
+    /* eslint-disable no-unused-expressions */
+    n.offsetHeight;
+    n.style.animation = a || '';
+  }
+}
+
+/* ------------------------------------------------------------
+   5. 입장 · 다시 보기
+   ------------------------------------------------------------ */
+function goHome(){
+  if (HOME) location.href = HOME;
+  /* HOME 이 비어 있으면 아무 일도 일어나지 않습니다 —
+     위 0번 항목에 홈페이지 주소를 넣어 주세요 */
+}
+enterBtn.addEventListener('click', goHome);
+document.getElementById('fbEnter').addEventListener('click', goHome);
+
+replayBtn.addEventListener('click', function(){
+  /* 카드가 옅어지는 동안 영상이 겹쳐 올라온다 — 되돌아갈 때도 끊기지 않게 */
+  film.removeEventListener('ended', parkFilm);
+  film.style.visibility = '';
+  film.volume = 1;
+  film.currentTime = 0;
+  film.classList.remove('out');
+  finished = false;
+  barFill.style.width = '0%';
+
+  endEl.classList.remove('show');
+
+  film.play().catch(function(){ film.muted = true; syncMuteLabel(); film.play(); });
+  startWatch();
+
+  setTimeout(function(){
+    endEl.classList.remove('on');
+    bar.classList.add('on');
+    skipBtn.classList.add('on');
+    muteBtn.classList.add('on');
+    fitBtn.classList.add('on');
+    syncMuteLabel();
+  }, 1150);
+});
+
+})();
+</script>
+</body>
+</html>
